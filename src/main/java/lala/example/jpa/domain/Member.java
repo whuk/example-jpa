@@ -2,10 +2,7 @@ package lala.example.jpa.domain;
 
 import lombok.*;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+import javax.persistence.*;
 import java.util.Date;
 
 @Entity
@@ -22,4 +19,7 @@ public class Member {
 
     @Temporal(TemporalType.DATE)
     private Date createdDate;
+
+    @OneToOne(mappedBy = "owner")
+    private MembershipCard membershipCard;
 }
