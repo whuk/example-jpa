@@ -19,7 +19,7 @@ public class MembershipCard {
     @Column(name = "card_number")
     private String number;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_email")
     private Member owner;
 

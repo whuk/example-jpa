@@ -2,6 +2,7 @@ package lala.example.jpa.domain;
 
 import lala.example.jpa.repository.MemberRepository;
 import lala.example.jpa.repository.MembershipCardRepository;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,42 +26,43 @@ public class OneToOneTest {
     @Autowired
     private MembershipCardRepository membershipCardRepository;
 
-    @Test
-    public void 참조키를이용한일대일단방향연관() {
+    private final String number = "1234";
+    private final String email = "ryan@naver.com";
 
-        // 1. 멤버 생성 및 가져오기
+    @Before
+    public void init() {
+        // 1. 멤버 생성
         Member user = Member.builder()
-                .email("ryan@naver.com")
+                .email(email)
                 .name("Ryan")
                 .createdDate(new Date())
                 .build();
         memberRepository.save(user);
+    }
 
-        ZonedDateTime zonedDateTime = ZonedDateTime.of(2020,12,31, 23,59,59,0, ZoneId.systemDefault());
-        Date expiryDate = Date.from(zonedDateTime.toInstant());
-        Optional<Member> owner = memberRepository.findById("ryan@naver.com");
+    @Test
+    public void 참조키를이용한일대일단방향연관의레이지로딩() {
+        // 1. 멤버쉽카드에 오너를 할당하여 생성
+        MembershipCard membershipCard = createMembershipCardWithOwner();
 
-        // 2-1. 멤버쉽 카드 생성
-        MembershipCard membershipCard = MembershipCard.builder()
-                .number("1234")
-                .owner(owner.get())
-                .expiryDate(expiryDate)
-                .build();
-        membershipCardRepository.save(membershipCard);
-        // member_email 필드에 앞서 만든 member 의 email 이 저장됨
+        // 2. 멤버쉽 카드 조회
+        Optional<MembershipCard> getCard = membershipCardRepository.findById(number);
+        // 이번에는 아우터 조인이 걸리지 않는다.
 
+        // 3. 멤버십 카드의 오너를 엑세스하면 이 시점에 select 쿼리가 실행되거나 프록시 객체를 활용. -> Lazy Loading
+        Member owner = getCard.get().getOwner();
+
+        assertThat(owner.getEmail()).isEqualTo(email);
+    }
+
+//    @Test
+    public void 참조키를이용한일대일단방향연관() {
         // 2-2. 멤버쉽 카드를 생성하되, 연관 관계를 설정하지 않음
-//        MembershipCard membershipCard = MembershipCard.builder()
-//                .number("1234")
-//                .expiryDate(expiryDate)
-//                .build();
-        membershipCardRepository.save(membershipCard);
-        // member_email 필드에 null 이 저장됨
-        
+        MembershipCard membershipCard = createMembershipCardWithOwner();
         // 3. 멤버쉽 카드를 조회하면, Member 와 아우터 조인이 걸려 함께 조회됨
-        Optional<MembershipCard> find = membershipCardRepository.findById("1234");
+        Optional<MembershipCard> find = membershipCardRepository.findById(number);
         // 2-1, 2-2 모두 기본적으로 아우터 조인이 걸림
-        
+
         // 4-1. 멤버쉽 카드에 할당된 멤버를 지우려고 하면?
 //        memberRepository.deleteAll();
         // 익셉션이 발생한다. 멤버의 email 이 참조 관계가 생겼기 때문...
@@ -73,7 +75,37 @@ public class OneToOneTest {
         memberRepository.deleteAll();
         // 참조 관계의 레코드가 삭제 되었기 때문에 정상 삭제
 
-        assertThat(membershipCardRepository.findById("1234")).isEmpty();
-        assertThat(memberRepository.findById("ryan@naver.com")).isEmpty();
+        assertThat(membershipCardRepository.findById(number)).isEmpty();
+        assertThat(memberRepository.findById(email)).isEmpty();
+    }
+
+    private MembershipCard ceateMembershipCardWithoutOwner() {
+
+        MembershipCard membershipCard = MembershipCard.builder()
+                .number(number)
+                .expiryDate(getZoneTimeDate())
+                .build();
+        membershipCardRepository.save(membershipCard);
+        // member_email 필드에 null 이 저장됨
+        return membershipCard;
+    }
+
+    private MembershipCard createMembershipCardWithOwner() {
+        Optional<Member> owner = memberRepository.findById(email);
+
+        // 2-1. 멤버쉽 카드 생성
+        MembershipCard membershipCard = MembershipCard.builder()
+                .number(number)
+                .owner(owner.get())
+                .expiryDate(getZoneTimeDate())
+                .build();
+        membershipCardRepository.save(membershipCard);
+        // member_email 필드에 앞서 만든 member 의 email 이 저장됨
+        return membershipCard;
+    }
+
+    private Date getZoneTimeDate() {
+        ZonedDateTime zonedDateTime = ZonedDateTime.of(2020, 12, 31, 23, 59, 59, 0, ZoneId.systemDefault());
+        return Date.from(zonedDateTime.toInstant());
     }
 }
