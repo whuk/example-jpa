@@ -41,6 +41,26 @@ public class OneToOneTest {
     }
 
     @Test
+    public void 참조키를이용한일대일양방향연관레이지로딩() {
+        // 1. 생성된 멤버는 아직 MembershipCard 가 존재하지 않음
+        Optional<Member> member = memberRepository.findById(email);
+        assertThat(member.get().getMembershipCard()).isNull();
+
+        // 2. 멤버쉽 카드에 오너를 할당하여 생성 - 레이지 로딩
+        MembershipCard membershipCard = createMembershipCardWithOwner();
+        // 레이지 로딩이기 때문에 쿼리에 조인은 걸리지 않음
+        Optional<MembershipCard> getCard = membershipCardRepository.findById(number);
+
+        // 3. 멤버에 멤버십 카드 연결
+        member.get().setMembershipCard(membershipCard);
+
+        // 4. 멤버 재조회 - 레이지 로딩, 멤버십 카드와 아우터 조인이 걸리지 않음
+        Optional<Member> getMember = memberRepository.findById(email);
+        MembershipCard membersCard = getMember.get().getMembershipCard();
+        assertThat(membersCard.getNumber()).isEqualTo(number);
+    }
+
+//    @Test
     public void 참조키를이용한일대일양방향연관() {
         // 1. 생성된 멤버는 아직 MembershipCard 가 존재하지 않음
         Optional<Member> member = memberRepository.findById(email);

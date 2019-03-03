@@ -20,6 +20,6 @@ public class Member {
     @Temporal(TemporalType.DATE)
     private Date createdDate;
 
-    @OneToOne(mappedBy = "owner")
+    @OneToOne(mappedBy = "owner", fetch = FetchType.LAZY)
     private MembershipCard membershipCard;
 }
